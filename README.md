@@ -1,8 +1,8 @@
 # ircx
 
 [![GoDoc](https://img.shields.io/badge/doc-GoDoc-blue.svg)](https://godoc.org/github.com/go-irc/ircx)
-[![Build Status](https://img.shields.io/github/workflow/status/go-irc/irc/CI.svg)](https://github.com/go-irc/ircx/actions)
-[![Coverage Status](https://img.shields.io/coveralls/go-irc/irc.svg)](https://coveralls.io/github/go-irc/ircx?branch=master)
+[![Build Status](https://img.shields.io/github/workflow/status/go-irc/ircx/CI.svg)](https://github.com/go-irc/ircx/actions)
+[![Coverage Status](https://img.shields.io/coveralls/go-irc/ircx.svg)](https://coveralls.io/github/go-irc/ircx?branch=master)
 
 ## Import Paths
 
