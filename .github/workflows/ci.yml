@@ -21,12 +21,16 @@ jobs:
       with:
         submodules: true
 
-    - name: Run golangci-lint
-      uses: actions-contrib/golangci-lint@v1
-      env:
-        GOROOT: ''
-      with:
-        golangci_lint_version: 'v1.27.0'
+    # NOTE: for some reason this isn't pulling the right version of
+    # golanglint-ci. There are a few bugs which have been filed around this
+    # which may be related.
+    #
+    #- name: Run golangci-lint
+    #  uses: actions-contrib/golangci-lint@v1
+    #  env:
+    #    GOROOT: ''
+    #  with:
+    #    golangci_lint_version: 'v1.27.0'
 
     - name: Download deps
       run: go mod download
