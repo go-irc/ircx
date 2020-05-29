@@ -60,6 +60,7 @@ type cap struct {
 // operations much simpler. It is safe for concurrent use.
 type Client struct {
 	*irc.Conn
+	closer   io.Closer
 	ISupport *ISupportTracker
 	Tracker  *Tracker
 
@@ -82,6 +83,7 @@ func NewClient(rwc io.ReadWriteCloser, config ClientConfig) *Client {
 		config:      config,
 		errChan:     make(chan error, 1),
 		caps:        make(map[string]cap),
+		closer:      rwc,
 		currentNick: config.Nick,
 	}
 
@@ -339,7 +341,7 @@ func (c *Client) RunContext(ctx context.Context) error {
 	}
 
 	close(exiting)
-	c.Close()
+	c.closer.Close()
 	wg.Wait()
 
 	return err
