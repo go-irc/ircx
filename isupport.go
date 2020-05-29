@@ -13,7 +13,7 @@ import (
 //
 // From http://www.irc.org/tech_docs/draft-brocklesby-irc-isupport-03.txt
 //
-// 005    RPL_ISUPPORT
+// 005    RPL_ISUPPORT.
 type ISupportTracker struct {
 	sync.RWMutex
 
