@@ -12,7 +12,7 @@ type Handler interface {
 // to be used as a Handler.
 type HandlerFunc func(*Client, *irc.Message)
 
-// Handle calls f(c, m)
+// Handle calls f(c, m).
 func (f HandlerFunc) Handle(c *Client, m *irc.Message) {
 	f(c, m)
 }

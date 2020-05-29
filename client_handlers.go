@@ -14,7 +14,6 @@ type clientFilter func(*Client, *irc.Message)
 // component down.
 var clientFilters = map[string]clientFilter{
 	"001":  handle001,
-	"005":  handle005,
 	"433":  handle433,
 	"437":  handle437,
 	"PING": handlePing,
@@ -31,15 +30,6 @@ var clientFilters = map[string]clientFilter{
 func handle001(c *Client, m *irc.Message) {
 	c.currentNick = m.Params[0]
 	c.connected = true
-}
-
-// From http://www.irc.org/tech_docs/draft-brocklesby-irc-isupport-03.txt
-//
-// 005    RPL_ISUPPORT
-func handle005(c *Client, m *irc.Message) {
-	if c.ISupport != nil {
-		c.ISupport.Handle(m)
-	}
 }
 
 // From rfc2812 section 5.2 (Error Replies)

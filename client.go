@@ -78,10 +78,11 @@ type Client struct {
 // NewClient creates a client given an io stream and a client config.
 func NewClient(rwc io.ReadWriteCloser, config ClientConfig) *Client {
 	c := &Client{
-		Conn:    irc.NewConn(rwc),
-		config:  config,
-		errChan: make(chan error, 1),
-		caps:    make(map[string]cap),
+		Conn:        irc.NewConn(rwc),
+		config:      config,
+		errChan:     make(chan error, 1),
+		caps:        make(map[string]cap),
+		currentNick: config.Nick,
 	}
 
 	if config.EnableISupport || config.EnableTracker {
@@ -89,7 +90,7 @@ func NewClient(rwc io.ReadWriteCloser, config ClientConfig) *Client {
 	}
 
 	if config.EnableTracker {
-		c.Tracker = NewTracker()
+		c.Tracker = NewTracker(c.ISupport)
 	}
 
 	// Replace the writer writeCallback with one of our own
@@ -280,6 +281,14 @@ func (c *Client) startReadLoop(wg *sync.WaitGroup, exiting chan struct{}) {
 					f(c, m)
 				}
 
+				if c.ISupport != nil {
+					c.ISupport.Handle(m)
+				}
+
+				if c.Tracker != nil {
+					c.Tracker.Handle(m)
+				}
+
 				if c.config.Handler != nil {
 					c.config.Handler.Handle(c, m)
 				}
@@ -305,8 +314,6 @@ func (c *Client) RunContext(ctx context.Context) error {
 
 	c.maybeStartLimiter(&wg, exiting)
 	c.maybeStartPingLoop(&wg, exiting)
-
-	c.currentNick = c.config.Nick
 
 	if c.config.Pass != "" {
 		c.Writef("PASS :%s", c.config.Pass)

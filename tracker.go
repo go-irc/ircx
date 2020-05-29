@@ -3,8 +3,7 @@ package ircx
 // TODO: store all nicks by uuid and map them in outgoing seabird events rather
 // than passing the nicks around directly
 
-// TODO: track the currentNick in the tracker so it can be independent of the
-// Client.
+// TODO: properly handle figuring out the mode when it changes for a user.
 
 import (
 	"errors"
@@ -14,29 +13,38 @@ import (
 	"github.com/go-irc/irc/v4"
 )
 
+// Tracker provides a convenient interface to track users, the channels they are
+// in, and what modes they have in those channels.
 type Tracker struct {
 	sync.RWMutex
 
-	channels map[string]*ChannelState
+	channels    map[string]*ChannelState
+	isupport    *ISupportTracker
+	currentNick string
 }
 
-func NewTracker() *Tracker {
+// NewTracker creates a new tracker instance.
+func NewTracker(isupport *ISupportTracker) *Tracker {
 	return &Tracker{
 		channels: make(map[string]*ChannelState),
+		isupport: isupport,
 	}
 }
 
+// ChannelState represents the current state of a channel, including the name,
+// topic, and all users in it.
 type ChannelState struct {
 	Name  string
 	Topic string
 	Users map[string]struct{}
 }
 
+// ListChannels will list the names of all known channels.
 func (t *Tracker) ListChannels() []string {
 	t.RLock()
 	defer t.RUnlock()
 
-	var ret []string
+	ret := make([]string, 0, len(t.channels))
 	for channel := range t.channels {
 		ret = append(ret, channel)
 	}
@@ -44,36 +52,57 @@ func (t *Tracker) ListChannels() []string {
 	return ret
 }
 
+// GetChannel will look up the ChannelState for a given channel name. It will
+// return nil if the channel is unknown.
 func (t *Tracker) GetChannel(name string) *ChannelState {
 	t.RLock()
 	defer t.RUnlock()
 
 	return t.channels[name]
 }
-func (t *Tracker) Handle(client *Client, msg *irc.Message) error {
+
+// Handle needs to be called for all 001, 332, 353, JOIN, TOPIC, PART, KICK,
+// QUIT, and NICK messages, but it is fine to call it with all. Note that this
+// will not handle calling the underlying ISupportTracker's Handle method.
+func (t *Tracker) Handle(msg *irc.Message) error {
 	switch msg.Command {
+	case "001":
+		return t.handle001(msg)
 	case "332":
-		return t.handleRplTopic(client, msg)
+		return t.handleRplTopic(msg)
 	case "353":
-		return t.handleRplNamReply(client, msg)
+		return t.handleRplNamReply(msg)
 	case "JOIN":
-		return t.handleJoin(client, msg)
+		return t.handleJoin(msg)
 	case "TOPIC":
-		return t.handleTopic(client, msg)
+		return t.handleTopic(msg)
 	case "PART":
-		return t.handlePart(client, msg)
+		return t.handlePart(msg)
 	case "KICK":
-		return t.handleKick(client, msg)
+		return t.handleKick(msg)
 	case "QUIT":
-		return t.handleQuit(client, msg)
+		return t.handleQuit(msg)
 	case "NICK":
-		return t.handleNick(client, msg)
+		return t.handleNick(msg)
 	}
 
 	return nil
 }
 
-func (t *Tracker) handleTopic(client *Client, msg *irc.Message) error {
+func (t *Tracker) handle001(msg *irc.Message) error {
+	if len(msg.Params) != 2 {
+		return errors.New("malformed RPL_WELCOME message")
+	}
+
+	t.Lock()
+	defer t.Unlock()
+
+	t.currentNick = msg.Params[0]
+
+	return nil
+}
+
+func (t *Tracker) handleTopic(msg *irc.Message) error {
 	if len(msg.Params) != 2 {
 		return errors.New("malformed TOPIC message")
 	}
@@ -93,7 +122,7 @@ func (t *Tracker) handleTopic(client *Client, msg *irc.Message) error {
 	return nil
 }
 
-func (t *Tracker) handleRplTopic(client *Client, msg *irc.Message) error {
+func (t *Tracker) handleRplTopic(msg *irc.Message) error {
 	if len(msg.Params) != 3 {
 		return errors.New("malformed RPL_TOPIC message")
 	}
@@ -116,7 +145,7 @@ func (t *Tracker) handleRplTopic(client *Client, msg *irc.Message) error {
 	return nil
 }
 
-func (t *Tracker) handleJoin(client *Client, msg *irc.Message) error {
+func (t *Tracker) handleJoin(msg *irc.Message) error {
 	if len(msg.Params) != 1 {
 		return errors.New("malformed JOIN message")
 	}
@@ -131,7 +160,7 @@ func (t *Tracker) handleJoin(client *Client, msg *irc.Message) error {
 	_, ok := t.channels[channel]
 
 	if !ok {
-		if user != client.CurrentNick() {
+		if user != t.currentNick {
 			return errors.New("received JOIN message for unknown channel")
 		}
 
@@ -144,7 +173,7 @@ func (t *Tracker) handleJoin(client *Client, msg *irc.Message) error {
 	return nil
 }
 
-func (t *Tracker) handlePart(client *Client, msg *irc.Message) error {
+func (t *Tracker) handlePart(msg *irc.Message) error {
 	if len(msg.Params) < 1 {
 		return errors.New("malformed PART message")
 	}
@@ -163,7 +192,7 @@ func (t *Tracker) handlePart(client *Client, msg *irc.Message) error {
 
 	// If we left the channel, we can drop the whole thing, otherwise just drop
 	// this user from the channel.
-	if user == client.CurrentNick() {
+	if user == t.currentNick {
 		delete(t.channels, channel)
 	} else {
 		state := t.channels[channel]
@@ -173,7 +202,7 @@ func (t *Tracker) handlePart(client *Client, msg *irc.Message) error {
 	return nil
 }
 
-func (t *Tracker) handleKick(client *Client, msg *irc.Message) error {
+func (t *Tracker) handleKick(msg *irc.Message) error {
 	if len(msg.Params) != 3 {
 		return errors.New("malformed KICK message")
 	}
@@ -193,7 +222,7 @@ func (t *Tracker) handleKick(client *Client, msg *irc.Message) error {
 
 	// If we left the channel, we can drop the whole thing, otherwise just drop
 	// this user from the channel.
-	if user == client.CurrentNick() {
+	if user == t.currentNick {
 		delete(t.channels, channel)
 	} else {
 		state := t.channels[channel]
@@ -203,7 +232,7 @@ func (t *Tracker) handleKick(client *Client, msg *irc.Message) error {
 	return nil
 }
 
-func (t *Tracker) handleQuit(client *Client, msg *irc.Message) error {
+func (t *Tracker) handleQuit(msg *irc.Message) error {
 	if len(msg.Params) != 1 {
 		return errors.New("malformed QUIT message")
 	}
@@ -222,7 +251,7 @@ func (t *Tracker) handleQuit(client *Client, msg *irc.Message) error {
 	return nil
 }
 
-func (t *Tracker) handleNick(client *Client, msg *irc.Message) error {
+func (t *Tracker) handleNick(msg *irc.Message) error {
 	if len(msg.Params) != 1 {
 		return errors.New("malformed NICK message")
 	}
@@ -235,6 +264,10 @@ func (t *Tracker) handleNick(client *Client, msg *irc.Message) error {
 	t.Lock()
 	defer t.Unlock()
 
+	if t.currentNick == oldUser {
+		t.currentNick = newUser
+	}
+
 	for _, state := range t.channels {
 		if _, ok := state.Users[oldUser]; ok {
 			delete(state.Users, oldUser)
@@ -245,7 +278,7 @@ func (t *Tracker) handleNick(client *Client, msg *irc.Message) error {
 	return nil
 }
 
-func (t *Tracker) handleRplNamReply(client *Client, msg *irc.Message) error {
+func (t *Tracker) handleRplNamReply(msg *irc.Message) error {
 	if len(msg.Params) != 4 {
 		return errors.New("malformed RPL_NAMREPLY message")
 	}
@@ -253,7 +286,7 @@ func (t *Tracker) handleRplNamReply(client *Client, msg *irc.Message) error {
 	channel := msg.Params[2]
 	users := strings.Split(strings.TrimSpace(msg.Trailing()), " ")
 
-	prefixes, ok := client.ISupport.GetPrefixMap()
+	prefixes, ok := t.isupport.GetPrefixMap()
 	if !ok {
 		return errors.New("ISupport missing prefix map")
 	}
@@ -276,7 +309,7 @@ func (t *Tracker) handleRplNamReply(client *Client, msg *irc.Message) error {
 		}
 
 		// The bot user should be added via JOIN
-		if user == client.CurrentNick() {
+		if user == t.currentNick {
 			continue
 		}
 

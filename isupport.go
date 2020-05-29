@@ -10,6 +10,10 @@ import (
 
 // ISupportTracker tracks the ISUPPORT values returned by servers and provides a
 // convenient way to access them.
+//
+// From http://www.irc.org/tech_docs/draft-brocklesby-irc-isupport-03.txt
+//
+// 005    RPL_ISUPPORT
 type ISupportTracker struct {
 	sync.RWMutex
 
@@ -17,7 +21,7 @@ type ISupportTracker struct {
 }
 
 // NewISupportTracker creates a new tracker instance with a set of sane defaults
-// if the server is missing them. It is safe for concurrent use.
+// if the server is missing them.
 func NewISupportTracker() *ISupportTracker {
 	return &ISupportTracker{
 		data: map[string]string{
@@ -35,12 +39,12 @@ func (t *ISupportTracker) Handle(msg *irc.Message) error {
 	}
 
 	if len(msg.Params) < 2 {
-		return errors.New("Malformed ISupport message")
+		return errors.New("malformed RPL_ISUPPORT message")
 	}
 
 	// Check for really old servers (or servers which based 005 off of rfc2812.
 	if !strings.HasSuffix(msg.Trailing(), "server") {
-		return errors.New("server did not return a valid ISUPPORT message for 005")
+		return errors.New("received invalid RPL_ISUPPORT message")
 	}
 
 	t.Lock()
@@ -60,7 +64,7 @@ func (t *ISupportTracker) Handle(msg *irc.Message) error {
 	return nil
 }
 
-// IsEnabled will check for boolean ISupport values
+// IsEnabled will check for boolean ISupport values.
 func (t *ISupportTracker) IsEnabled(key string) bool {
 	t.RLock()
 	defer t.RUnlock()
@@ -69,7 +73,7 @@ func (t *ISupportTracker) IsEnabled(key string) bool {
 	return ok
 }
 
-// GetList will check for list ISupport values
+// GetList will check for list ISupport values.
 func (t *ISupportTracker) GetList(key string) ([]string, bool) {
 	t.RLock()
 	defer t.RUnlock()
@@ -82,7 +86,7 @@ func (t *ISupportTracker) GetList(key string) ([]string, bool) {
 	return strings.Split(data, ","), true
 }
 
-// GetMap will check for map ISupport values
+// GetMap will check for map ISupport values.
 func (t *ISupportTracker) GetMap(key string) (map[string]string, bool) {
 	t.RLock()
 	defer t.RUnlock()
@@ -106,7 +110,7 @@ func (t *ISupportTracker) GetMap(key string) (map[string]string, bool) {
 	return ret, true
 }
 
-// GetRaw will get the raw ISupport values
+// GetRaw will get the raw ISupport values.
 func (t *ISupportTracker) GetRaw(key string) (string, bool) {
 	t.RLock()
 	defer t.RUnlock()
@@ -130,12 +134,12 @@ func (t *ISupportTracker) GetPrefixMap() (map[rune]rune, bool) {
 
 	// We loop through the string using range so we get bytes, then we throw the
 	// two results together in the map.
-	var symbols []rune // ~&@%+
+	symbols := make([]rune, 0, len(prefix)/2-1) // ~&@%+
 	for _, r := range prefix[i+1:] {
 		symbols = append(symbols, r)
 	}
 
-	var modes []rune // qaohv
+	modes := make([]rune, 0, len(symbols)) // qaohv
 	for _, r := range prefix[1:i] {
 		modes = append(modes, r)
 	}
