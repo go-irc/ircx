@@ -23,6 +23,10 @@ type ClientConfig struct {
 	// non-nil.
 	EnableISupport bool
 
+	// If this is set to true, the Tracker value on the client struct will be
+	// non-nil.
+	EnableTracker bool
+
 	// Connection settings
 	PingFrequency time.Duration
 	PingTimeout   time.Duration
@@ -57,6 +61,7 @@ type cap struct {
 type Client struct {
 	*irc.Conn
 	ISupport *ISupportTracker
+	Tracker  *Tracker
 
 	config ClientConfig
 
@@ -79,8 +84,12 @@ func NewClient(rwc io.ReadWriteCloser, config ClientConfig) *Client {
 		caps:    make(map[string]cap),
 	}
 
-	if config.EnableISupport {
+	if config.EnableISupport || config.EnableTracker {
 		c.ISupport = NewISupportTracker()
+	}
+
+	if config.EnableTracker {
+		c.Tracker = NewTracker()
 	}
 
 	// Replace the writer writeCallback with one of our own
