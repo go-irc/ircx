@@ -52,7 +52,6 @@ type cap struct {
 // much simpler.
 type Client struct {
 	*irc.Conn
-	rwc    io.ReadWriteCloser
 	config ClientConfig
 
 	// Internal state
@@ -69,7 +68,6 @@ type Client struct {
 func NewClient(rwc io.ReadWriteCloser, config ClientConfig) *Client {
 	c := &Client{
 		Conn:    irc.NewConn(rwc),
-		rwc:     rwc,
 		config:  config,
 		errChan: make(chan error, 1),
 		caps:    make(map[string]cap),
@@ -315,7 +313,7 @@ func (c *Client) RunContext(ctx context.Context) error {
 	}
 
 	close(exiting)
-	c.rwc.Close()
+	c.Close()
 	wg.Wait()
 
 	return err
