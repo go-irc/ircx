@@ -1,7 +1,7 @@
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/go-irc/irc/v4 v4.0.0-alpha.2 h1:B4ATEa+q0o6G8JnWJr3/v1Wf8Nlify+OsDDJj29UtW8=
-github.com/go-irc/irc/v4 v4.0.0-alpha.2/go.mod h1:J7EPVR5BNVbIQL3kgKF9gMz8AYFSN0OrYJvKyZIArYo=
+github.com/go-irc/irc/v4 v4.0.0-alpha.3 h1:5BCiprGfW1/FoV+Qj74uoV3obMR9gTyJq4kroJ6gcvs=
+github.com/go-irc/irc/v4 v4.0.0-alpha.3/go.mod h1:J7EPVR5BNVbIQL3kgKF9gMz8AYFSN0OrYJvKyZIArYo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

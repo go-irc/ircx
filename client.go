@@ -19,6 +19,10 @@ type ClientConfig struct {
 	User string
 	Name string
 
+	// If this is set to true, the ISupport value on the client struct will be
+	// non-nil.
+	EnableISupport bool
+
 	// Connection settings
 	PingFrequency time.Duration
 	PingTimeout   time.Duration
@@ -48,10 +52,12 @@ type cap struct {
 	Available bool
 }
 
-// Client is a wrapper around irc.Conn which is designed to make common operations
-// much simpler.
+// Client is a wrapper around irc.Conn which is designed to make common
+// operations much simpler. It is safe for concurrent use.
 type Client struct {
 	*irc.Conn
+	ISupport *ISupportTracker
+
 	config ClientConfig
 
 	// Internal state
@@ -73,6 +79,10 @@ func NewClient(rwc io.ReadWriteCloser, config ClientConfig) *Client {
 		caps:    make(map[string]cap),
 	}
 
+	if config.EnableISupport {
+		c.ISupport = NewISupportTracker()
+	}
+
 	// Replace the writer writeCallback with one of our own
 	c.Conn.Writer.WriteCallback = c.writeCallback
 
@@ -84,7 +94,7 @@ func (c *Client) writeCallback(w *irc.Writer, line string) error {
 		<-c.limiter
 	}
 
-	err := w.WriteRaw([]byte(line + "\r\n"))
+	_, err := w.RawWrite([]byte(line + "\r\n"))
 	if err != nil {
 		c.sendError(err)
 	}
@@ -273,7 +283,7 @@ func (c *Client) startReadLoop(wg *sync.WaitGroup, exiting chan struct{}) {
 // strange and unexpected ways if it is called again before the first connection
 // exits.
 func (c *Client) Run() error {
-	return c.RunContext(context.TODO())
+	return c.RunContext(context.Background())
 }
 
 // RunContext is the same as Run but a context.Context can be passed in for
