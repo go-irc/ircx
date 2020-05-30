@@ -19,7 +19,7 @@ import (
 	"net"
 
 	"github.com/go-irc/irc.v4"
-  "github.com/go-irc/ircx.v0"
+	"github.com/go-irc/ircx.v0"
 )
 
 func main() {
