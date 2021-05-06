@@ -19,6 +19,11 @@ type ClientConfig struct {
 	User string
 	Name string
 
+	// NickServ information. This will default to the NickServ user and no
+	// password.
+	NickServNick string
+	NickServPass string
+
 	// If this is set to true, the ISupport value on the client struct will be
 	// non-nil.
 	EnableISupport bool
@@ -85,6 +90,10 @@ func NewClient(rwc io.ReadWriteCloser, config ClientConfig) *Client {
 		caps:        make(map[string]cap),
 		closer:      rwc,
 		currentNick: config.Nick,
+	}
+
+	if c.config.NickServNick == "" {
+		c.config.NickServNick = "NickServ"
 	}
 
 	if config.EnableISupport || config.EnableTracker {
