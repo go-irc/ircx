@@ -4,6 +4,10 @@
 [![Build Status](https://img.shields.io/github/workflow/status/go-irc/ircx/CI.svg)](https://github.com/go-irc/ircx/actions)
 [![Coverage Status](https://img.shields.io/coveralls/go-irc/ircx.svg)](https://coveralls.io/github/go-irc/ircx?branch=master)
 
+This repo has been archived because in the go-irc v4.0.0 release, the additional
+features provided here were merged back in to the main repo as experimental
+features.
+
 ## Import Paths
 
 All development happens on the `master` branch and when features are
